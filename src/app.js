@@ -5,7 +5,7 @@ import connectDB from "./config/db.js";
 
 import authRoutes from "./routes/authRoutes.js";
 import busRoutes from "./routes/busRoutes.js";
-//import routeRoutes from "./routes/routeRoutes.js";
+import routeRoutes from "./routes/routeRoutes.js";
 //import reservationRoutes from "./routes/bookingRoutes.js";
 import assignmentRoutes from "./routes/assignmentRoutes.js";
 
@@ -23,7 +23,7 @@ connectDB();
 // Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/buses", busRoutes);
-//app.use("/api/routes", routeRoutes);
+app.use("/api/routes", routeRoutes);
 //app.use("/api/reservations", reservationRoutes);
 app.use("/api/assignments", assignmentRoutes);
 

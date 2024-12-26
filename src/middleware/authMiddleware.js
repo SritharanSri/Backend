@@ -1,25 +1,39 @@
-import jwt from "jsonwebtoken";
+import jwt from 'jsonwebtoken';
+import User from '../models/User.js';  // Import your user model
 
-export const authenticateUser = (req, res, next) => {
-  const token = req.header("Authorization")?.split(" ")[1];
+// Middleware to authenticate user and check if they are admin
+export const protect = async (req, res, next) => {
+  let token;
 
-  if (!token) {
-    return res.status(401).json({ message: "Access denied. No token provided." });
+  // Check if token is provided in headers
+  if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+    try {
+      // Get token from headers
+      token = req.headers.authorization.split(' ')[1];
+
+      // Verify token
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+      // Attach the user to the request object
+      req.user = await User.findById(decoded.id).select('-password');  // Exclude password from user object
+
+      next();  // Proceed to the next middleware or route handler
+    } catch (error) {
+      res.status(401).json({ message: 'Not authorized, token failed' });
+    }
   }
 
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded; // Attach user data to the request object
-    next();
-  } catch (error) {
-    res.status(400).json({ message: "Invalid token." });
+  // If no token is provided
+  if (!token) {
+    res.status(401).json({ message: 'Not authorized, no token' });
   }
 };
 
-export const authorizeRoles = (roles) => {
+// Middleware to authorize access only for admin users
+export const authorizeRoles = (...roles) => {
   return (req, res, next) => {
     if (!roles.includes(req.user.role)) {
-      return res.status(403).json({ message: "Access denied. Insufficient permissions." });
+      return res.status(403).json({ message: 'Forbidden: You do not have permission to access this route' });
     }
     next();
   };
