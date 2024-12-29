@@ -1,15 +1,15 @@
 import Route from '../models/Route.js';
 
-// Create a new route
 export const createRoute = async (req, res) => {
   try {
-    const { name, startLocation, endLocation, distance } = req.body;
+    const { name, startLocation, endLocation, distance, pricePerSeat } = req.body;
 
     const newRoute = new Route({
       name,
       startLocation,
       endLocation,
       distance,
+      pricePerSeat
     });
 
     await newRoute.save();
@@ -19,7 +19,6 @@ export const createRoute = async (req, res) => {
   }
 };
 
-// Get all routes
 export const getRoutes = async (req, res) => {
   try {
     const routes = await Route.find();
@@ -29,7 +28,6 @@ export const getRoutes = async (req, res) => {
   }
 };
 
-// Get a single route by ID
 export const getRouteById = async (req, res) => {
   try {
     const route = await Route.findById(req.params.id);
@@ -42,7 +40,6 @@ export const getRouteById = async (req, res) => {
   }
 };
 
-// Update a route
 export const updateRoute = async (req, res) => {
   try {
     const route = await Route.findByIdAndUpdate(req.params.id, req.body, { new: true });
@@ -55,7 +52,6 @@ export const updateRoute = async (req, res) => {
   }
 };
 
-// Delete a route
 export const deleteRoute = async (req, res) => {
   try {
     const route = await Route.findByIdAndDelete(req.params.id);

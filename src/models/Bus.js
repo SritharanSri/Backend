@@ -5,27 +5,22 @@ const busSchema = new mongoose.Schema(
     busNumber: {
       type: String,
       required: true,
-      unique: true,  // Ensures bus number is unique
+      unique: true,  
     },
     busType: {
       type: String,
       enum: ['AC', 'Non-AC'],
       required: true,
     },
-    capacity: {
+    availableSeats: {
       type: Number,
-      required: true,
-    },
-    route: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Route',  // Reference to Route model
       required: true,
     },
     status: {
       type: String,
       enum: ['Active', 'Inactive'],
       default: 'Active',
-    },
+    }
   },
   {
     timestamps: true,

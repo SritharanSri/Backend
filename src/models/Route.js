@@ -19,6 +19,10 @@ const routeSchema = new mongoose.Schema(
       type: Number,
       required: true,
     },
+    pricePerSeat: { 
+      type: Number, 
+      required: true 
+    }
   },
   {
     timestamps: true,
