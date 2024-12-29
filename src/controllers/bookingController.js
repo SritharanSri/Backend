@@ -2,12 +2,13 @@ import Booking from '../models/Booking.js';
 import Bus from '../models/Bus.js';
 import Permit from '../models/Permit.js';
 import Seat from '../models/Seat.js';
+import schedule from 'node-schedule';
 
 export const createBooking = async (req, res) => {
   try {
-    const { busId, seatNumbers, date } = req.body;
+    const { userId,busId, seatNumbers, date } = req.body;
 
-    const bus = await Bus.findById(busId);
+    const bus = await Bus.findById({_id: busId});
     if (!bus) {
       return res.status(404).json({ message: 'Bus not found' });
     }
@@ -28,11 +29,6 @@ export const createBooking = async (req, res) => {
       });
     }
 
-    await Seat.updateMany(
-      { bus: busId, seatNumber: { $in: seatNumbers } },
-      { $set: { status: 'booked' } }
-    );
-
     const permit = await Permit.findOne({ bus: busId }).populate('route', 'startLocation endLocation pricePerSeat');
     if (!permit || !permit.route) {
       return res.status(404).json({ message: 'No valid route found for the selected bus' });
@@ -42,7 +38,7 @@ export const createBooking = async (req, res) => {
     const totalPrice = seatNumbers.length * route.pricePerSeat;
 
     const booking = new Booking({
-      user: req.user._id,
+      user: userId,
       bus: busId,
       route: route._id,
       seatNumbers,
@@ -50,7 +46,35 @@ export const createBooking = async (req, res) => {
       date,
     });
 
+    console.log(route);
+    
+
     await booking.save();
+    
+
+    await Seat.updateMany(
+      { bus: busId, seatNumber: { $in: seatNumbers } },
+      { $set: { status: 'booked' } }
+    );
+
+    seatNumbers.forEach((seatNumber) => {
+      schedule.scheduleJob(Date.now() + 24 * 60 * 60 * 1000, async () => {
+        await Seat.updateOne({ bus: busId, seatNumber }, { $set: { status: 'available' } });
+      });
+    });
+
+    schedule.scheduleJob(Date.now() + 24 * 60 * 60 * 1000, async () => {
+      const updatedBooking = await Booking.findById(booking._id);
+      if (updatedBooking && updatedBooking.paymentStatus === 'unpaid') {
+        await Seat.updateMany(
+          { bus: busId, seatNumber: { $in: seatNumbers } },
+          { $set: { status: 'available' } }
+        );
+        await Booking.findByIdAndDelete(booking._id); 
+      }
+    });
+    
+
 
     res.status(201).json({
       message: 'Booking created successfully',
@@ -68,6 +92,83 @@ export const createBooking = async (req, res) => {
         seatNumbers,
         totalPrice,
         date,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const processPayment = async (req, res) => {
+  try {
+    const { bookingId, cardNumber, expiryDate, cvv, cardHolderName } = req.body;
+
+    const booking = await Booking.findById(bookingId)//.populate('route', 'pricePerSeat');
+    if (!booking) {
+      return res.status(404).json({ message: 'Booking not found' });
+    }
+
+    if (booking.paymentStatus === 'paid') {
+      return res.status(400).json({ message: 'Payment has already been completed for this booking.' });
+    }
+
+    const validateCardNumber = (cardNumber) => {
+      const digits = cardNumber.replace(/\D/g, '');
+      let sum = 0;
+      let shouldDouble = false;
+
+      for (let i = digits.length - 1; i >= 0; i--) {
+        let digit = parseInt(digits.charAt(i), 10);
+
+        if (shouldDouble) {
+          digit *= 2;
+          if (digit > 9) digit -= 9;
+        }
+
+        sum += digit;
+        shouldDouble = !shouldDouble;
+      }
+
+      return sum % 10 === 0;
+    };
+
+    if (!validateCardNumber(cardNumber)) {
+      return res.status(400).json({ message: 'Invalid card number' });
+    }
+
+    const currentYear = new Date().getFullYear();
+    const currentMonth = new Date().getMonth() + 1;
+    const [expMonth, expYear] = expiryDate.split('/').map(Number);
+
+    if (!expMonth || !expYear || expYear < currentYear || (expYear === currentYear && expMonth < currentMonth)) {
+      return res.status(400).json({ message: 'Card is expired' });
+    }
+
+    if (!cvv || cvv.length !== 3 || isNaN(cvv)) {
+      return res.status(400).json({ message: 'Invalid CVV' });
+    }
+
+    if (!cardHolderName || cardHolderName.trim() === '') {
+      return res.status(400).json({ message: 'Cardholder name is required' });
+    }
+
+    console.log('Payment processed successfully');
+
+    booking.paymentStatus = 'paid';
+    booking.bookingStatus = 'confirmed';
+    await booking.save();
+
+    await Seat.updateMany(
+      { bus: booking.bus, seatNumber: { $in: booking.seatNumbers } },
+      { $set: { status: 'booked' } }
+    );
+
+    res.status(200).json({
+      message: 'Payment successful. Booking confirmed.',
+      booking: {
+        _id: booking._id,
+        paymentStatus: booking.paymentStatus,
+        bookingStatus: booking.bookingStatus,
       },
     });
   } catch (error) {
