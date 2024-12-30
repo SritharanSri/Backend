@@ -12,7 +12,7 @@ const router = express.Router();
 router.post('/', createBooking);
 router.get('/bookings', getAllBookings);
 router.get('/bookings/:id', getBookingById);
-router.delete('/bookings/:id', cancelBooking);
+router.delete('/:id', cancelBooking);
 router.post('/payment', processPayment);
 
 

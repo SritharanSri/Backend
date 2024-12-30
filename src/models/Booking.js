@@ -1,4 +1,3 @@
-// src/models/Booking.js
 import mongoose from 'mongoose';
 
 const bookingSchema = new mongoose.Schema(
@@ -14,7 +13,7 @@ const bookingSchema = new mongoose.Schema(
       required: true,
     },
     seatNumbers: {
-      type: [String], // Array of seat numbers
+      type: [String],
       required: true,
       validate: {
         validator: (seats) => seats.length > 0,

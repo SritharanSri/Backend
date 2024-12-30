@@ -2,13 +2,15 @@ import Booking from '../models/Booking.js';
 import Bus from '../models/Bus.js';
 import Permit from '../models/Permit.js';
 import Seat from '../models/Seat.js';
+import User from '../models/User.js'; 
+import { sendEmail } from '../utils/emailService.js'; 
 import schedule from 'node-schedule';
 
 export const createBooking = async (req, res) => {
   try {
-    const { userId,busId, seatNumbers, date } = req.body;
+    const { userId, busId, seatNumbers, date } = req.body;
 
-    const bus = await Bus.findById({_id: busId});
+    const bus = await Bus.findById(busId);
     if (!bus) {
       return res.status(404).json({ message: 'Bus not found' });
     }
@@ -46,22 +48,34 @@ export const createBooking = async (req, res) => {
       date,
     });
 
-    console.log(route);
-    
-
     await booking.save();
-    
 
     await Seat.updateMany(
       { bus: busId, seatNumber: { $in: seatNumbers } },
       { $set: { status: 'booked' } }
     );
 
-    seatNumbers.forEach((seatNumber) => {
-      schedule.scheduleJob(Date.now() + 24 * 60 * 60 * 1000, async () => {
-        await Seat.updateOne({ bus: busId, seatNumber }, { $set: { status: 'available' } });
-      });
-    });
+    const user = await User.findById(userId);
+    if (user && user.email) {
+      const emailSubject = 'Booking Confirmation';
+      const emailText = `
+        Hello ${user.name},
+        
+        Your booking has been confirmed!
+        
+        Booking Details:
+        - Booking ID: ${booking._id}
+        - Bus Number: ${bus.busNumber}
+        - Route: ${route.startLocation} to ${route.endLocation}
+        - Seats: ${seatNumbers.join(', ')}
+        - Total Price: $${totalPrice}
+        - Date: ${date}
+        
+        Thank you for choosing our service.
+      `;
+
+      await sendEmail(user.email, emailSubject, emailText);
+    }
 
     schedule.scheduleJob(Date.now() + 24 * 60 * 60 * 1000, async () => {
       const updatedBooking = await Booking.findById(booking._id);
@@ -70,11 +84,9 @@ export const createBooking = async (req, res) => {
           { bus: busId, seatNumber: { $in: seatNumbers } },
           { $set: { status: 'available' } }
         );
-        await Booking.findByIdAndDelete(booking._id); 
+        await Booking.findByIdAndDelete(booking._id);
       }
     });
-    
-
 
     res.status(201).json({
       message: 'Booking created successfully',
@@ -103,7 +115,7 @@ export const processPayment = async (req, res) => {
   try {
     const { bookingId, cardNumber, expiryDate, cvv, cardHolderName } = req.body;
 
-    const booking = await Booking.findById(bookingId)//.populate('route', 'pricePerSeat');
+    const booking = await Booking.findById(bookingId);
     if (!booking) {
       return res.status(404).json({ message: 'Booking not found' });
     }
@@ -152,8 +164,6 @@ export const processPayment = async (req, res) => {
       return res.status(400).json({ message: 'Cardholder name is required' });
     }
 
-    console.log('Payment processed successfully');
-
     booking.paymentStatus = 'paid';
     booking.bookingStatus = 'confirmed';
     await booking.save();
@@ -189,6 +199,7 @@ export const getAllBookings = async (req, res) => {
   }
 };
 
+
 export const getBookingById = async (req, res) => {
   try {
     const { id } = req.params;
@@ -211,34 +222,37 @@ export const cancelBooking = async (req, res) => {
   try {
     const { id } = req.params;
 
+    // Validate if the id is a valid ObjectId (assuming you're using Mongoose)
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: 'Invalid booking ID' });
+    }
+
+    // Fetch the booking by id
     const booking = await Booking.findById(id);
     if (!booking) {
       return res.status(404).json({ message: 'Booking not found' });
     }
 
-    await Seat.updateMany(
+    // Update the seat statuses to available
+    const updatedSeats = await Seat.updateMany(
       { bus: booking.bus, seatNumber: { $in: booking.seatNumbers } },
       { $set: { status: 'available' } }
     );
 
-    await booking.remove();
-    res.status(200).json({ message: 'Booking canceled and seats released' });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-export const getBusSeats = async (req, res) => {
-  try {
-    const { busId } = req.params;
-
-    const seats = await Seat.find({ bus: busId });
-    if (!seats || seats.length === 0) {
-      return res.status(404).json({ message: 'No seats found for this bus' });
+    if (updatedSeats.modifiedCount === 0) {
+      return res.status(400).json({ message: 'No seats updated' });
     }
 
-    res.status(200).json(seats);
+    await booking.deleteOne();
+
+    return res.status(200).json({ message: 'Booking canceled and seats released' });
+
   } catch (error) {
-    res.status(500).json({ message: error.message });
+   
+    console.error(error);
+    
+    // Respond with a generic error message
+    return res.status(500).json({ message: 'Something went wrong, please try again later' });
   }
 };
+

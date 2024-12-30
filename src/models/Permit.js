@@ -29,12 +29,12 @@ const permitSchema = new mongoose.Schema(
     },
     bus: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Bus', // Reference to the Bus model
+      ref: 'Bus', 
       required: true,
     },
     route: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Route', // Reference to the Route model
+      ref: 'Route', 
       required: true,
     },
     issuerName: {
