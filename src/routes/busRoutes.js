@@ -1,19 +1,25 @@
-import express from "express";
-import { authenticateUser, authorizeRoles } from "../middleware/authMiddleware.js";
+import express from 'express';
+import {
+  createBus,
+  getBuses,
+  getBusById,
+  updateBus,
+  deleteBus,
+} from '../controllers/busController.js';
+import { protect, authorizeRoles } from '../middleware/authMiddleware.js';  
 
 const router = express.Router();
 
-router.get("/", authenticateUser, (req, res) => {
-  res.send("All Buses - Accessible to authenticated users");
-});
+router.use(protect);
 
-router.post(
-  "/admin-only",
-  authenticateUser,
-  authorizeRoles(["admin"]),
-  (req, res) => {
-    res.send("Admin-only route - Accessible only to admins");
-  }
-);
+router.post('/', authorizeRoles('admin'), createBus);
+
+router.get('/', authorizeRoles('admin'), getBuses);
+
+router.get('/:id', authorizeRoles('admin'), getBusById);
+
+router.put('/:id', authorizeRoles('admin'), updateBus);
+
+router.delete('/:id', authorizeRoles('admin'), deleteBus);
 
 export default router;
