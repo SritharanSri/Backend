@@ -40,7 +40,7 @@ const router = express.Router();
 
 /**
  * @swagger
- * /:
+ * /routes/:
  *   post:
  *     summary: Create a new route
  *     tags: [Routes]
@@ -61,7 +61,7 @@ const router = express.Router();
 
 /**
  * @swagger
- * /:
+ * /routes/:
  *   get:
  *     summary: Get all routes
  *     tags: [Routes]
@@ -80,7 +80,7 @@ const router = express.Router();
 
 /**
  * @swagger
- * /{id}:
+ * /routes/{id}:
  *   get:
  *     summary: Get a route by ID
  *     tags: [Routes]
@@ -106,7 +106,7 @@ const router = express.Router();
 
 /**
  * @swagger
- * /{id}:
+ * /routes/{id}:
  *   put:
  *     summary: Update a route by ID
  *     tags: [Routes]
@@ -134,7 +134,7 @@ const router = express.Router();
 
 /**
  * @swagger
- * /{id}:
+ * /routes/{id}:
  *   delete:
  *     summary: Delete a route by ID
  *     tags: [Routes]
