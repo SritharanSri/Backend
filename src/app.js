@@ -10,6 +10,8 @@ import permitRoutes from "./routes/permitRoutes.js";
 import bookingRoutes from "./routes/bookingRoutes.js";
 import searchRoutes  from './routes/searchRoutes.js';
 
+import swaggerSetup from './swagger.js';
+
 dotenv.config();
 
 const app = express();
@@ -25,6 +27,8 @@ app.use("/api/buses", busRoutes);
 app.use("/api/routes", routeRoutes);
 app.use("/api/booking", bookingRoutes);
 app.use("/api/search", searchRoutes);
+
+swaggerSetup(app);
 
 app.use((err, req, res, next) => {
   res.status(500).json({ error: err.message });
