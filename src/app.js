@@ -10,7 +10,7 @@ import permitRoutes from "./routes/permitRoutes.js";
 import bookingRoutes from "./routes/bookingRoutes.js";
 import searchRoutes  from './routes/searchRoutes.js';
 
-import swaggerSetup from './swagger.js';
+import swaggerSetup from './utils/swagger.js';
 
 dotenv.config();
 
